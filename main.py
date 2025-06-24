@@ -16,6 +16,7 @@ async def root():
 @app.post("/")
 async def telegram_webhook(request: Request):
     data = await request.json()
+    print("DEBUG full payload:", data)  # 🔍 Показываем весь входящий JSON
 
     # Новая задача
     if "message" in data and "text" in data["message"]:
@@ -34,9 +35,11 @@ async def telegram_webhook(request: Request):
 
             print(f"Новая задача: {message_id} от {author}")
 
-    # Реакции
+    # Реакция на сообщение
     elif "message_reaction" in data:
         reaction = data["message_reaction"]
+        print("DEBUG reaction payload:", reaction)
+
         if reaction["reaction"] == "✅":
             message_id = reaction["message_id"]
             user = reaction["user"].get("username", f"id{reaction['user']['id']}")
@@ -45,9 +48,8 @@ async def telegram_webhook(request: Request):
             if task and user not in task["performed"]:
                 task["performed"].append(user)
 
-                # ВОТ ЭТИ СТРОКИ ОБЯЗАТЕЛЬНЫ 👇
                 print("Отправлено:", task)
                 response = requests.post(SCRIPT_URL, json=task)
                 print("Ответ от Google:", response.status_code, response.text)
 
-    return {"ok": True}
+    r
