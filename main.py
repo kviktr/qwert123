@@ -45,6 +45,7 @@ async def telegram_webhook(request: Request):
             if task and user not in task["performed"]:
                 task["performed"].append(user)
 
+                # ВОТ ЭТИ СТРОКИ ОБЯЗАТЕЛЬНЫ 👇
                 print("Отправлено:", task)
                 response = requests.post(SCRIPT_URL, json=task)
                 print("Ответ от Google:", response.status_code, response.text)
