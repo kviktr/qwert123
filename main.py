@@ -42,10 +42,11 @@ async def telegram_webhook(request: Request):
         print("DEBUG reaction payload:", reaction)
 
         if (
-            "new_reaction" in reaction and
-            reaction["new_reaction"] and
-            reaction["new_reaction"][0].get("emoji") == "✅"
-        ):
+    "new_reaction" in reaction and
+    reaction["new_reaction"] and
+    reaction["new_reaction"][0].get("emoji") == "👌"
+):
+
             message_id = reaction["message_id"]
             user = reaction["user"].get("username", f"id{reaction['user']['id']}")
 
