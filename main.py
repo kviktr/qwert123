@@ -1,46 +1,51 @@
 from fastapi import FastAPI, Request
-import os
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
 app = FastAPI()
 
-SCRIPT_URL = os.getenv("SCRIPT_URL")
-TASKS = {}  # message_id: {task_text, author, performed}
+# URL веб-приложения Google Apps Script (замени на свой, если нужно)
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx24V8m_grKsc96BDwZ1z0lRKVHWTUu2NTmkgXsbY_4U_K0meXyPYfGe1pMxlFFr7MT/exec"
+
+# Хранилище задач в памяти
+TASKS = {}
 
 @app.get("/")
 async def root():
-    return {"ok": True}
+    return {"status": "ok"}
 
 @app.post("/")
 async def telegram_webhook(request: Request):
     data = await request.json()
-    print("DEBUG full payload:", data)  # 🔍 Показываем весь входящий JSON
+    print("DEBUG full payload:", data)
 
-    # Новая задача
-    if "message" in data and "text" in data["message"]:
-        msg = data["message"]
-        if "#задача" in msg["text"]:
-            message_id = msg["message_id"]
-            text = msg["text"]
-            author = msg["from"].get("username", f"id{msg['from']['id']}")
+    # Новое сообщение с задачей
+    if "message" in data:
+        message = data["message"]
+        text = message.get("text", "")
+        if "#задача" in text.lower():
+            task_id = message["message_id"]
+            task_text = text
+            author = message["from"].get("username", f"id{message['from']['id']}")
 
-            TASKS[message_id] = {
-                "task_id": str(message_id),
-                "task_text": text,
+            TASKS[task_id] = {
+                "task_id": task_id,
+                "task_text": task_text,
                 "author": author,
-                "performed": []
+                "performed": [],
             }
 
-            print(f"Новая задача: {message_id} от {author}")
+            print(f"Новая задача: {task_id} от {author}")
 
-    # Реакция на сообщение
+    # Обработка реакции ✅
     elif "message_reaction" in data:
         reaction = data["message_reaction"]
         print("DEBUG reaction payload:", reaction)
 
-        if reaction["reaction"] == "✅":
+        if (
+            "new_reaction" in reaction and
+            reaction["new_reaction"] and
+            reaction["new_reaction"][0].get("emoji") == "✅"
+        ):
             message_id = reaction["message_id"]
             user = reaction["user"].get("username", f"id{reaction['user']['id']}")
 
@@ -51,3 +56,5 @@ async def telegram_webhook(request: Request):
                 print("Отправлено:", task)
                 response = requests.post(SCRIPT_URL, json=task)
                 print("Ответ от Google:", response.status_code, response.text)
+
+    return {"ok": True}
