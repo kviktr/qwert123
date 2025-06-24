@@ -51,5 +51,3 @@ async def telegram_webhook(request: Request):
                 print("Отправлено:", task)
                 response = requests.post(SCRIPT_URL, json=task)
                 print("Ответ от Google:", response.status_code, response.text)
-
-    r
