@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 import os
 import requests
 from dotenv import load_dotenv
@@ -7,26 +6,23 @@ from dotenv import load_dotenv
 load_dotenv()
 app = FastAPI()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 SCRIPT_URL = os.getenv("SCRIPT_URL")
-TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
-
 TASKS = {}  # message_id: {task_text, author, performed}
 
 @app.get("/")
 async def root():
-    return JSONResponse({"ok": True})
+    return {"ok": True}
 
 @app.post("/")
 async def telegram_webhook(request: Request):
     data = await request.json()
 
-    # Новая задача (с тегом #задача)
+    # Новая задача
     if "message" in data and "text" in data["message"]:
         msg = data["message"]
-        text = msg["text"]
-        if "#задача" in text:
+        if "#задача" in msg["text"]:
             message_id = msg["message_id"]
+            text = msg["text"]
             author = msg["from"].get("username", f"id{msg['from']['id']}")
 
             TASKS[message_id] = {
@@ -35,21 +31,22 @@ async def telegram_webhook(request: Request):
                 "author": author,
                 "performed": []
             }
+
             print(f"Новая задача: {message_id} от {author}")
 
-    # Обработка реакции
+    # Реакции
     elif "message_reaction" in data:
         reaction = data["message_reaction"]
         if reaction["reaction"] == "✅":
-            msg_id = reaction["message_id"]
+            message_id = reaction["message_id"]
             user = reaction["user"].get("username", f"id{reaction['user']['id']}")
 
-            if msg_id in TASKS:
-                if user not in TASKS[msg_id]["performed"]:
-                    TASKS[msg_id]["performed"].append(user)
+            task = TASKS.get(message_id)
+            if task and user not in task["performed"]:
+                task["performed"].append(user)
 
-                # Отправляем в Google Таблицу
-                requests.post(SCRIPT_URL, json=TASKS[msg_id])
-                print(f"Отправлено: {TASKS[msg_id]}")
+                print("Отправлено:", task)
+                response = requests.post(SCRIPT_URL, json=task)
+                print("Ответ от Google:", response.status_code, response.text)
 
     return {"ok": True}
